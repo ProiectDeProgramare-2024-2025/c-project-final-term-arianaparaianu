@@ -1,0 +1,17 @@
+Dacia,Duster,B100XYZ
+BMW,Seria 3,B200ABC
+Mercedes,C-Class,B300DEF
+Audi,A4,B400GHI
+Volkswagen,Passat,B500JKL
+Toyota,Corolla,B600MNO
+Ford,Focus,B700PQR
+Renault,Megane,B800STU
+Skoda,Octavia,B900VWX
+Honda,Civic,B111YZA
+Hyundai,Tucson,B222BCD
+Nissan,Qashqai,B333EFG
+Mazda,CX-5,B444HIJ
+Peugeot,3008,B555KLM
+Opel,Astra,B666NOP
+Lamborghini,Huracan,AR69BYU
+Dodge,Challenger,TM05ARi
