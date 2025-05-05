@@ -1,0 +1,8 @@
+# depslib dependency file v1.0
+1746474118 source:c:\users\p4t44\onedrive\desktop\arianappc\main.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<ctype.h>
+	<strings.h>
+
