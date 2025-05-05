@@ -2,6 +2,30 @@
 #include <stdlib.h>
 #include <string.h>
 
+/*--------------------------------------------------*/
+/* Detectăm platforma și configurăm ecranul & culori */
+/*--------------------------------------------------*/
+#ifdef _WIN32
+    #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <windows.h>
+    #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+    #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+    #endif
+    #define CLEAR_SCREEN "cls"
+#else
+    #define CLEAR_SCREEN "clear"
+#endif
+
+/*----------------------------*/
+/*        ANSI CULORI         */
+/*----------------------------*/
+#define COLOR_RESET      "\033[0m"
+#define COLOR_GREEN      "\033[0;32m"
+#define COLOR_RED        "\033[0;31m"
+#define COLOR_LIGHT_BLUE "\033[0;94m"
+
 #define FILE_NAME "flota_auto.txt"
 
 typedef struct {
@@ -10,92 +34,151 @@ typedef struct {
     char numar_inmatriculare[20];
 } Autovehicul;
 
-void afiseaza_autovehicule();
-void adauga_autovehicul();
-void cauta_autovehicul();
-void sterge_autovehicul();
+/*--------------------------------------------------*/
+/*          Protocoale funcţii (same as original)   */
+/*--------------------------------------------------*/
+static void afiseaza_autovehicule(void);
+static void adauga_autovehicul(void);
+static void cauta_autovehicul(void);
+static void sterge_autovehicul(void);
 
-void afiseaza_meniu() {
-    printf("\nMeniu:\n");
-    printf("1. Afiseaza autovehicule\n");
-    printf("2. Adauga autovehicul\n");
-    printf("3. Cauta autovehicul\n");
-    printf("4. Sterge autovehicul\n");
-    printf("5. Iesire\n");
+/*----------------------------*/
+/*       Utilitare afişare    */
+/*----------------------------*/
+static void printTitle(const char *title)
+{
+    printf(COLOR_LIGHT_BLUE "\n===== %s =====\n" COLOR_RESET, title);
+}
+
+static void pauseAndReturn(void)
+{
+    puts("\nApasati Enter pentru a reveni...");
+    getchar();
+}
+
+static void afiseaza_meniu(void)
+{
+    printTitle("Meniu Principal");
+    puts("1. Afiseaza autovehicule");
+    puts("2. Adauga autovehicul");
+    puts("3. Cauta autovehicul");
+    puts("4. Sterge autovehicul");
+    puts("5. Iesire");
     printf("Alegeti o optiune: ");
 }
 
-int main() {
-    int optiune;
+/*----------------------------*/
+/*             MAIN           */
+/*----------------------------*/
+int main(void)
+{
+#ifdef _WIN32
+    /* Activăm secvenţele ANSI pe Windows 10+ */
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut != INVALID_HANDLE_VALUE) {
+        DWORD dwMode = 0;
+        if (GetConsoleMode(hOut, &dwMode)) {
+            SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+        }
+    }
+#endif
 
+    int optiune;
     do {
         afiseaza_meniu();
-        scanf("%d", &optiune);
-        getchar(); // curata bufferul
+        if (scanf("%d", &optiune) != 1) {
+            int c; while ((c = getchar()) != '\n' && c != EOF) {}
+            optiune = 0;
+        }
+        getchar(); /* curăţă newline‑ul după scanf */
 
         switch(optiune) {
             case 1: afiseaza_autovehicule(); break;
-            case 2: adauga_autovehicul(); break;
-            case 3: cauta_autovehicul(); break;
-            case 4: sterge_autovehicul(); break;
-            case 5: printf("Iesire...\n"); break;
-            default: printf("Optiune invalida!\n");
+            case 2: adauga_autovehicul();    break;
+            case 3: cauta_autovehicul();     break;
+            case 4: sterge_autovehicul();    break;
+            case 5: puts("Iesire...");       break;
+            default: puts("Optiune invalida!"); pauseAndReturn();
         }
     } while(optiune != 5);
 
     return 0;
 }
 
-void afiseaza_autovehicule() {
+/*----------------------------*/
+/*      Implementări CRUD     */
+/*----------------------------*/
+static void afiseaza_autovehicule(void)
+{
+    system(CLEAR_SCREEN);
+    printTitle("Lista Autovehicule");
+
     FILE *f = fopen(FILE_NAME, "r");
     if (!f) {
-        printf("Eroare la deschiderea fisierului sau fisierul nu exista!\n");
+        puts(COLOR_RED "Eroare la deschiderea fisierului sau fisierul nu exista!" COLOR_RESET);
+        pauseAndReturn();
         return;
     }
 
     Autovehicul a;
-    printf("\nLista autovehicule:\n");
+    int gasit = 0;
     while (fscanf(f, "%49[^,],%49[^,],%19[^\n]\n", a.marca, a.tip, a.numar_inmatriculare) == 3) {
-        printf("Marca: %s, Tip: %s, Nr. Inmatriculare: %s\n", a.marca, a.tip, a.numar_inmatriculare);
+        printf(COLOR_GREEN "Marca: %s, Tip: %s, Nr. Inmatriculare: %s" COLOR_RESET "\n",
+               a.marca, a.tip, a.numar_inmatriculare);
+        gasit = 1;
     }
     fclose(f);
+    if (!gasit) puts("Nu exista inca autovehicule in flota.");
+
+    pauseAndReturn();
 }
 
-void adauga_autovehicul() {
+static void adauga_autovehicul(void)
+{
+    system(CLEAR_SCREEN);
+    printTitle("Adauga Autovehicul");
+
     FILE *f = fopen(FILE_NAME, "a");
     if (!f) {
-        printf("Eroare la deschiderea fisierului!\n");
+        puts(COLOR_RED "Eroare la deschiderea fisierului!" COLOR_RESET);
+        pauseAndReturn();
         return;
     }
 
     Autovehicul a;
     printf("Introduceti marca: ");
-    fgets(a.marca, 50, stdin);
+    fgets(a.marca, sizeof a.marca, stdin);
     strtok(a.marca, "\n");
 
     printf("Introduceti tipul vehiculului: ");
-    fgets(a.tip, 50, stdin);
+    fgets(a.tip, sizeof a.tip, stdin);
     strtok(a.tip, "\n");
 
     printf("Introduceti numarul de inmatriculare: ");
-    fgets(a.numar_inmatriculare, 20, stdin);
+    fgets(a.numar_inmatriculare, sizeof a.numar_inmatriculare, stdin);
     strtok(a.numar_inmatriculare, "\n");
 
     fprintf(f, "%s,%s,%s\n", a.marca, a.tip, a.numar_inmatriculare);
     fclose(f);
 
-    printf("Autovehicul adaugat cu succes!\n");
+    puts(COLOR_GREEN "Autovehicul adaugat cu succes!" COLOR_RESET);
+    pauseAndReturn();
 }
 
-void cauta_autovehicul() {
+static void cauta_autovehicul(void)
+{
+    system(CLEAR_SCREEN);
+    printTitle("Cauta Autovehicul");
+
     char numar[20];
     printf("Introduceti numarul de inmatriculare: ");
-    fgets(numar, 20, stdin);
+    fgets(numar, sizeof numar, stdin);
     strtok(numar, "\n");
 
     FILE *f = fopen(FILE_NAME, "r");
     if (!f) {
-        printf("Fisierul nu exista!\n");
+        puts(COLOR_RED "Fisierul nu exista!" COLOR_RESET);
+        pauseAndReturn();
         return;
     }
 
@@ -103,31 +186,40 @@ void cauta_autovehicul() {
     int gasit = 0;
     while (fscanf(f, "%49[^,],%49[^,],%19[^\n]\n", a.marca, a.tip, a.numar_inmatriculare) == 3) {
         if (strcmp(a.numar_inmatriculare, numar) == 0) {
-            printf("Autovehicul gasit: Marca: %s, Tip: %s, Nr. Inmatriculare: %s\n", a.marca, a.tip, a.numar_inmatriculare);
+            printf(COLOR_GREEN "Autovehicul gasit: Marca: %s, Tip: %s, Nr. Inmatriculare: %s" COLOR_RESET "\n",
+                   a.marca, a.tip, a.numar_inmatriculare);
             gasit = 1;
             break;
         }
     }
     fclose(f);
-    if (!gasit) printf("Autovehiculul nu a fost gasit!\n");
+    if (!gasit) puts(COLOR_RED "Autovehiculul nu a fost gasit!" COLOR_RESET);
+
+    pauseAndReturn();
 }
 
-void sterge_autovehicul() {
+static void sterge_autovehicul(void)
+{
+    system(CLEAR_SCREEN);
+    printTitle("Sterge Autovehicul");
+
     char numar[20];
     printf("Introduceti numarul de inmatriculare al masinii de sters: ");
-    fgets(numar, 20, stdin);
+    fgets(numar, sizeof numar, stdin);
     strtok(numar, "\n");
 
     FILE *f = fopen(FILE_NAME, "r");
     if (!f) {
-        printf("Fisierul nu exista!\n");
+        puts(COLOR_RED "Fisierul nu exista!" COLOR_RESET);
+        pauseAndReturn();
         return;
     }
 
     FILE *temp = fopen("temp.txt", "w");
     if (!temp) {
-        printf("Eroare la crearea fisierului temporar!\n");
+        puts(COLOR_RED "Eroare la crearea fisierului temporar!" COLOR_RESET);
         fclose(f);
+        pauseAndReturn();
         return;
     }
 
@@ -147,7 +239,9 @@ void sterge_autovehicul() {
     rename("temp.txt", FILE_NAME);
 
     if (gasit)
-        printf("Autovehicul sters cu succes!\n");
+        puts(COLOR_GREEN "Autovehicul sters cu succes!" COLOR_RESET);
     else
-        printf("Autovehiculul nu a fost gasit!\n");
+        puts(COLOR_RED "Autovehiculul nu a fost gasit!" COLOR_RESET);
+
+    pauseAndReturn();
 }
